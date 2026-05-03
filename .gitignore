@@ -1,0 +1,17 @@
+# Virtual environments
+rag_venv/
+.venv/
+
+# Secrets
+.env
+
+# Python cache
+__pycache__/
+*.pyc
+
+# FAISS generated files
+faiss_index/
+
+# OS / editor
+.vscode/
+.DS_Store

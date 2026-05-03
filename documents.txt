@@ -1,0 +1,5 @@
+An AI agent is a system that can perceive its environment, reason about actions, and act to achieve specific goals.
+
+Modern AI agents often use tools and validation mechanisms to ensure safe and reliable behavior.
+
+Agentic AI systems commonly separate planning, execution, and validation to prevent hallucinations and unsafe actions.
