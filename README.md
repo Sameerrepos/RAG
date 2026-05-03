@@ -18,3 +18,9 @@ START → Retriever(FAISS) → Responder(LLM) → Validator → [VALID → END |
 ```bash
 python -m venv rag_venv
 rag_venv\Scripts\activate
+
+## Run
+
+```bash
+pip install -r requirements.txt
+python RAG_final.py
