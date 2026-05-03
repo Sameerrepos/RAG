@@ -1,3 +1,6 @@
+FAISS retrieval (Top‑K chunks)
+Grounded generation + validation + bounded retry
+
 # RAG Assistant (LangGraph + FAISS + Guardrails)
 
 A production-style RAG pipeline that retrieves relevant chunks using **FAISS**, generates answers grounded in retrieved context, validates outputs, and retries safely when validation fails.
