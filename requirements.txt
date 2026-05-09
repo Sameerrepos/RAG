@@ -1,6 +1,11 @@
+fastapi
+uvicorn
+python-dotenv
 langgraph
 langchain
-langchain-groq
 langchain-community
+langchain-groq
+langchain-huggingface
+langchain-text-splitters
 faiss-cpu
 sentence-transformers

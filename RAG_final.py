@@ -13,8 +13,13 @@ try:
     from langchain_huggingface.embeddings import HuggingFaceEmbeddings
 except Exception:
     from langchain_community.embeddings import HuggingFaceEmbeddings
+    
+from dotenv import load_dotenv
+from pathlib import Path
+load_dotenv(dotenv_path=Path(__file__).parent / ".env", override=True)
+import os
 
-
+load_dotenv()
 # =====================================================
 # CONFIG
 # =====================================================
@@ -222,3 +227,21 @@ if __name__ == "__main__":
 
     print("\n--- RETRIES (counts INVALID loops) ---")
     print(output["retries"])
+
+def ask_rag(user_query: str):
+    output = app.invoke({
+        "user_query": user_query,
+        "retrieved_context": "",
+        "sources": [],
+        "response": "",
+        "validation": "",
+        "retries": 0,
+    })
+
+    return {
+        "question": user_query,
+        "answer": output["response"],
+        "sources": output["sources"],
+        "validation": output["validation"],
+        "retries": output["retries"],
+    }
