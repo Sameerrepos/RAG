@@ -178,7 +178,9 @@ git push
 ## Live Deployment
 
 Swagger UI:
-POST https://your-render-url.onrender.com/ask
+POST 
+https://rag-fastapi-xtr5.onrender.com/ask
+(https://rag-fastapi-xtr5.onrender.com/docs)
 
 
 ## Project Highlights
