@@ -147,7 +147,39 @@ Request body:
 }
 ```
 
+## Logging / Observability
+
+The API logs request-level metadata for debugging and monitoring:
+
+- User question
+- LLM API calls
+- Validation result
+- Retry count
+- Retrieved source count
+- Response time
+- HTTP status
+
+Example log:
+
+```text
+Request completed | validation=VALID | retries=0 | sources_count=1 | response_time=0.513s
 ---
+
+## 4. Commit latest logging changes
+
+Run:
+
+```powershell
+git status
+git add api.py README.md
+git commit -m "Add request logging for RAG API"
+git push
+---
+## Live Deployment
+
+Swagger UI:
+POST https://your-render-url.onrender.com/ask
+
 
 ## Project Highlights
 
