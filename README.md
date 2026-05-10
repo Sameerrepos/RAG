@@ -2,11 +2,12 @@ FAISS retrieval (Top‑K chunks)
 Grounded generation + validation + bounded retry
 
 ## limitations:-
-Retrieval quality depends on chunking and document quality
-Wrong chunk → wrong answer
-Next improvement: reranking / better chunking
-
-This makes you look mature.
+- Retrieval quality depends on document quality, chunking strategy, and embedding model quality.
+- Wrong or irrelevant chunks can lead to weak or incorrect answers.
+- Current implementation uses a small local knowledge base.
+- Local HuggingFace embedding models can be memory-heavy for free-tier cloud platforms.
+- Render Free Tier deployment may fail due to memory limits when loading local embeddings.
+- Next improvements can include reranking, lightweight/external embeddings, managed vector search, logging, observability, and cloud deployment
 # RAG Assistant (LangGraph + FAISS + Guardrails)
 
 A production-style RAG pipeline that retrieves relevant chunks using **FAISS**, generates answers grounded in retrieved context, validates outputs, and retries safely when validation fails.
@@ -197,6 +198,18 @@ RAG/
 ├── README.md
 └── archive/
 ```
+## Deployment Note
+
+This project runs successfully locally using Docker.
+
+During cloud deployment testing on Render Free Tier, the service hit memory limits while loading local HuggingFace embedding models. This is expected because local embedding models and dependencies such as sentence-transformers can require more memory than lightweight free-tier instances provide.
+
+For production deployment, recommended options include:
+- Use a memory-optimized cloud instance
+- Replace local embeddings with a lightweight embedding provider
+- Use an external embedding API
+- Move vector search to a managed service such as Azure AI Search, Pinecone, Qdrant, or similar
+- Add logging, monitoring, and request-level observability before production use
 
 ---
 
