@@ -1,29 +1,27 @@
 from typing import TypedDict, List
+from pathlib import Path
+
+from dotenv import load_dotenv
 from langgraph.graph import StateGraph, END
 from langchain_groq import ChatGroq
 
 from langchain_community.document_loaders import TextLoader
 from langchain_community.vectorstores import FAISS
+from langchain_community.embeddings import FastEmbedEmbeddings
 
-# ✅ Correct import for new LangChain setups
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-# ✅ Recommended Hugging Face embeddings import (avoids deprecation warnings)
-try:
-    from langchain_huggingface.embeddings import HuggingFaceEmbeddings
-except Exception:
-    from langchain_community.embeddings import HuggingFaceEmbeddings
-    
-from dotenv import load_dotenv
-from pathlib import Path
-load_dotenv(dotenv_path=Path(__file__).parent / ".env", override=True)
-import os
 
-load_dotenv()
+# =====================================================
+# LOAD ENV
+# =====================================================
+load_dotenv(dotenv_path=Path(__file__).parent / ".env", override=True)
+
+
 # =====================================================
 # CONFIG
 # =====================================================
-INDEX_DIR = "faiss_index"
+INDEX_DIR = "faiss_index_fastembed"
 TOP_K = 3
 CHUNK_SIZE = 350
 CHUNK_OVERLAP = 60
@@ -55,18 +53,28 @@ llm = ChatGroq(
 # VECTOR STORE (FAISS) - Build once, load later
 # =====================================================
 def build_or_load_vector_store() -> FAISS:
-    embeddings = HuggingFaceEmbeddings(
-        model_name="sentence-transformers/all-MiniLM-L6-v2"
-    )
+    """
+    Builds or loads FAISS vector store using FastEmbed embeddings.
 
-    # Try loading existing FAISS index
+    Note:
+    We use a new index folder: faiss_index_fastembed
+    because old FAISS indexes created with HuggingFaceEmbeddings
+    should not be reused with FastEmbedEmbeddings.
+    """
+
+    embeddings = FastEmbedEmbeddings()
+
     try:
         try:
-            return FAISS.load_local(INDEX_DIR, embeddings, allow_dangerous_deserialization=True)
+            return FAISS.load_local(
+                INDEX_DIR,
+                embeddings,
+                allow_dangerous_deserialization=True
+            )
         except TypeError:
             return FAISS.load_local(INDEX_DIR, embeddings)
+
     except Exception:
-        # Build index if not found
         loader = TextLoader("documents.txt", encoding="utf-8")
         raw_docs = loader.load()
 
@@ -74,11 +82,13 @@ def build_or_load_vector_store() -> FAISS:
             chunk_size=CHUNK_SIZE,
             chunk_overlap=CHUNK_OVERLAP
         )
+
         docs = splitter.split_documents(raw_docs)
 
-        vs = FAISS.from_documents(docs, embeddings)
-        vs.save_local(INDEX_DIR)
-        return vs
+        vector_store = FAISS.from_documents(docs, embeddings)
+        vector_store.save_local(INDEX_DIR)
+
+        return vector_store
 
 
 vector_store = build_or_load_vector_store()
@@ -89,6 +99,7 @@ vector_store = build_or_load_vector_store()
 # =====================================================
 def retriever_node(state: State) -> State:
     query = state["user_query"]
+
     results = vector_store.similarity_search_with_score(query, k=TOP_K)
 
     sources: List[str] = []
@@ -125,6 +136,7 @@ Context:
 User Question:
 {state['user_query']}
 """
+
     answer = llm.invoke(prompt).content.strip()
 
     return {
@@ -153,10 +165,10 @@ Answer:
 
 Reply ONLY with: VALID or INVALID
 """
+
     raw = llm.invoke(prompt).content.strip().upper()
     verdict = "VALID" if "VALID" in raw else "INVALID"
 
-    # Count retries ONLY when INVALID
     new_retries = state["retries"] + (1 if verdict == "INVALID" else 0)
 
     return {
@@ -167,13 +179,15 @@ Reply ONLY with: VALID or INVALID
 
 
 # =====================================================
-# ROUTER (Re-retrieve on INVALID)
+# ROUTER
 # =====================================================
 def router(state: State):
     if state["validation"] == "VALID":
         return END
+
     if state["retries"] >= MAX_RETRIES:
         return END
+
     return "retriever"
 
 
@@ -187,6 +201,7 @@ graph.add_node("responder", responder_node)
 graph.add_node("validator", validator_node)
 
 graph.set_entry_point("retriever")
+
 graph.add_edge("retriever", "responder")
 graph.add_edge("responder", "validator")
 
@@ -203,31 +218,8 @@ app = graph.compile()
 
 
 # =====================================================
-# RUN
+# API FUNCTION FOR FastAPI
 # =====================================================
-if __name__ == "__main__":
-    output = app.invoke({
-        "user_query": "What is an AI agent?",
-        "retrieved_context": "",
-        "sources": [],
-        "response": "",
-        "validation": "",
-        "retries": 0,
-    })
-
-    print("\n--- RESPONSE (with citations) ---")
-    print(output["response"])
-
-    print("\n--- SOURCES (retrieved) ---")
-    for s in output["sources"]:
-        print(s)
-
-    print("\n--- VALIDATION ---")
-    print(output["validation"])
-
-    print("\n--- RETRIES (counts INVALID loops) ---")
-    print(output["retries"])
-
 def ask_rag(user_query: str):
     output = app.invoke({
         "user_query": user_query,
@@ -245,3 +237,23 @@ def ask_rag(user_query: str):
         "validation": output["validation"],
         "retries": output["retries"],
     }
+
+
+# =====================================================
+# CLI RUN
+# =====================================================
+if __name__ == "__main__":
+    output = ask_rag("What is an AI agent?")
+
+    print("\n--- RESPONSE (with citations) ---")
+    print(output["answer"])
+
+    print("\n--- SOURCES (retrieved) ---")
+    for source in output["sources"]:
+        print(source)
+
+    print("\n--- VALIDATION ---")
+    print(output["validation"])
+
+    print("\n--- RETRIES (counts INVALID loops) ---")
+    print(output["retries"])
